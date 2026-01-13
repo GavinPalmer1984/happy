@@ -312,6 +312,11 @@ export const pl: TranslationStructure = {
 
     session: {
         inputPlaceholder: 'Wpisz wiadomość...',
+        pendingMessages: ({ count }: { count: number }) => {
+            if (count === 1) return '1 wiadomość w kolejce';
+            if (count >= 2 && count <= 4) return `${count} wiadomości w kolejce`;
+            return `${count} wiadomości w kolejce`;
+        },
     },
 
     commandPalette: {
@@ -462,6 +467,7 @@ export const pl: TranslationStructure = {
             folderLabel: 'FOLDER',
         },
         noMachinesAvailable: 'Brak maszyn',
+        claudeModeChangeDisabled: 'Tryb uprawnień musi być ustawiony podczas tworzenia sesji Claude. Nie można go zmienić w czasie działania.',
     },
 
     machineLauncher: {

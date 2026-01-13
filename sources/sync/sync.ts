@@ -225,6 +225,14 @@ class Sync {
 
     async sendMessage(sessionId: string, text: string, displayText?: string) {
 
+        // Check if socket is connected - if not, queue the message
+        const socketStatus = storage.getState().socketStatus;
+        if (socketStatus !== 'connected') {
+            log.log(`🔄 Socket not connected (${socketStatus}), queuing message for session ${sessionId}`);
+            storage.getState().addPendingMessage(sessionId, text, displayText);
+            return;
+        }
+
         // Get encryption
         const encryption = this.encryption.getSessionEncryption(sessionId);
         if (!encryption) { // Should never happen
@@ -318,6 +326,27 @@ class Sync {
             retryCount: 0,
             timestamp: Date.now(),
         });
+    }
+
+    /**
+     * Drain pending messages for all sessions
+     * Called when socket reconnects to send any queued messages
+     */
+    private drainPendingMessages() {
+        const sessions = storage.getState().sessions;
+        for (const sessionId of Object.keys(sessions)) {
+            const pendingMessages = storage.getState().getPendingMessages(sessionId);
+            if (pendingMessages.length > 0) {
+                log.log(`🔄 Draining ${pendingMessages.length} pending message(s) for session ${sessionId}`);
+                // Send messages in order (FIFO)
+                for (const msg of pendingMessages) {
+                    // Remove from queue first to prevent duplicates
+                    storage.getState().removePendingMessage(sessionId, msg.id);
+                    // Send the message
+                    this.sendMessage(sessionId, msg.text, msg.displayText);
+                }
+            }
+        }
     }
 
     /**
@@ -1634,6 +1663,8 @@ class Sync {
                     }
                 }
             }
+            // Drain pending message queues for all sessions
+            this.drainPendingMessages();
         });
     }
 

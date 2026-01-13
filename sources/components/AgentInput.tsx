@@ -73,6 +73,7 @@ interface AgentInputProps {
     minHeight?: number;
     profileId?: string | null;
     onProfileClick?: () => void;
+    pendingMessagesCount?: number;
 }
 
 const MAX_CONTEXT_SIZE = 190000;
@@ -634,8 +635,8 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                     </>
                 )}
 
-                {/* Connection status, context warning, and permission mode */}
-                {(props.connectionStatus || contextWarning || props.permissionMode) && (
+                {/* Connection status, pending messages, context warning, and permission mode */}
+                {(props.connectionStatus || contextWarning || props.permissionMode || (props.pendingMessagesCount ?? 0) > 0) && (
                     <View style={{
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -655,7 +656,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                         />
                                         <Text style={{
                                             fontSize: 11,
-                                            color: props.connectionStatus.color,
+                                            color: theme.colors.textSecondary,
                                             ...Typography.default()
                                         }}>
                                             {props.connectionStatus.text}
@@ -729,6 +730,19 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                         </>
                                     )}
                                 </>
+                            )}
+                            {/* Pending messages indicator */}
+                            {(props.pendingMessagesCount ?? 0) > 0 && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                    <Ionicons name="cloud-upload-outline" size={12} color={theme.colors.textSecondary} />
+                                    <Text style={{
+                                        fontSize: 11,
+                                        color: theme.colors.textSecondary,
+                                        ...Typography.default()
+                                    }}>
+                                        {t('session.pendingMessages', { count: props.pendingMessagesCount })}
+                                    </Text>
+                                </View>
                             )}
                             {contextWarning && (
                                 <Text style={{

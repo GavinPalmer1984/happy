@@ -303,6 +303,7 @@ export const zhHans: TranslationStructure = {
 
     session: {
         inputPlaceholder: '输入消息...',
+        pendingMessages: ({ count }: { count: number }) => `${count}条消息排队中`,
     },
 
     commandPalette: {
@@ -454,6 +455,7 @@ export const zhHans: TranslationStructure = {
             folderLabel: '文件夹',
         },
         noMachinesAvailable: '无设备',
+        claudeModeChangeDisabled: '权限模式必须在创建Claude会话时设置。无法在运行时更改。',
     },
 
     machineLauncher: {

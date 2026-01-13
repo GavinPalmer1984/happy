@@ -398,6 +398,11 @@ export const ru: TranslationStructure = {
 
     session: {
         inputPlaceholder: 'Введите сообщение...',
+        pendingMessages: ({ count }: { count: number }) => {
+            if (count === 1) return '1 сообщение в очереди';
+            if (count >= 2 && count <= 4) return `${count} сообщения в очереди`;
+            return `${count} сообщений в очереди`;
+        },
     },
 
     commandPalette: {
@@ -462,6 +467,7 @@ export const ru: TranslationStructure = {
             folderLabel: 'ПАПКА',
         },
         noMachinesAvailable: 'Нет машин',
+        claudeModeChangeDisabled: 'Режим разрешений должен быть установлен при создании сессии Claude. Его нельзя изменить во время работы.',
     },
 
     machineLauncher: {

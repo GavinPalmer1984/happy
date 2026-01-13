@@ -316,6 +316,7 @@ export const en: TranslationStructure = {
 
     session: {
         inputPlaceholder: 'Type a message ...',
+        pendingMessages: ({ count }: { count: number }) => count === 1 ? '1 message queued' : `${count} messages queued`,
     },
 
     commandPalette: {
@@ -467,6 +468,7 @@ export const en: TranslationStructure = {
             folderLabel: 'FOLDER',
         },
         noMachinesAvailable: 'No machines',
+        claudeModeChangeDisabled: 'Permission mode must be set when creating a Claude session. It cannot be changed at runtime.',
     },
 
     machineLauncher: {

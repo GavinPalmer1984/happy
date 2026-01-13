@@ -118,6 +118,11 @@ interface StorageState {
     updateSessionDraft: (sessionId: string, draft: string | null) => void;
     updateSessionPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'read-only' | 'safe-yolo' | 'yolo') => void;
     updateSessionModelMode: (sessionId: string, mode: 'default') => void;
+    // Pending messages queue methods
+    addPendingMessage: (sessionId: string, text: string, displayText?: string) => string; // Returns message ID
+    removePendingMessage: (sessionId: string, messageId: string) => void;
+    getPendingMessages: (sessionId: string) => Array<{ id: string; text: string; displayText?: string; createdAt: number }>;
+    clearPendingMessages: (sessionId: string) => void;
     // Artifact methods
     applyArtifacts: (artifacts: DecryptedArtifact[]) => void;
     addArtifact: (artifact: DecryptedArtifact) => void;
@@ -827,6 +832,68 @@ export const storage = create<StorageState>()((set, get) => {
                 sessions: updatedSessions
             };
         }),
+
+        // Pending messages queue methods
+        addPendingMessage: (sessionId: string, text: string, displayText?: string) => {
+            const messageId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            set((state) => {
+                const session = state.sessions[sessionId];
+                if (!session) return state;
+
+                const pendingMessages = session.pendingMessages || [];
+                const updatedSessions = {
+                    ...state.sessions,
+                    [sessionId]: {
+                        ...session,
+                        pendingMessages: [...pendingMessages, {
+                            id: messageId,
+                            text,
+                            displayText,
+                            createdAt: Date.now()
+                        }]
+                    }
+                };
+
+                return { ...state, sessions: updatedSessions };
+            });
+            return messageId;
+        },
+
+        removePendingMessage: (sessionId: string, messageId: string) => set((state) => {
+            const session = state.sessions[sessionId];
+            if (!session || !session.pendingMessages) return state;
+
+            const updatedSessions = {
+                ...state.sessions,
+                [sessionId]: {
+                    ...session,
+                    pendingMessages: session.pendingMessages.filter(m => m.id !== messageId)
+                }
+            };
+
+            return { ...state, sessions: updatedSessions };
+        }),
+
+        getPendingMessages: (sessionId: string) => {
+            const session = get().sessions[sessionId];
+            return session?.pendingMessages || [];
+        },
+
+        clearPendingMessages: (sessionId: string) => set((state) => {
+            const session = state.sessions[sessionId];
+            if (!session) return state;
+
+            const updatedSessions = {
+                ...state.sessions,
+                [sessionId]: {
+                    ...session,
+                    pendingMessages: []
+                }
+            };
+
+            return { ...state, sessions: updatedSessions };
+        }),
+
         // Project management methods
         getProjects: () => projectManager.getProjects(),
         getProject: (projectId: string) => projectManager.getProject(projectId),
@@ -1100,6 +1167,13 @@ export function useSessionUsage(sessionId: string) {
     return storage(useShallow((state) => {
         const session = state.sessionMessages[sessionId];
         return session?.reducerState?.latestUsage ?? null;
+    }));
+}
+
+export function usePendingMessages(sessionId: string) {
+    return storage(useShallow((state) => {
+        const session = state.sessions[sessionId];
+        return session?.pendingMessages ?? [];
     }));
 }
 

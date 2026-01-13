@@ -301,6 +301,7 @@ export const es: TranslationStructure = {
 
     session: {
         inputPlaceholder: 'Escriba un mensaje ...',
+        pendingMessages: ({ count }: { count: number }) => count === 1 ? '1 mensaje en cola' : `${count} mensajes en cola`,
     },
 
     commandPalette: {
@@ -452,6 +453,7 @@ export const es: TranslationStructure = {
             folderLabel: 'CARPETA',
         },
         noMachinesAvailable: 'Sin máquinas',
+        claudeModeChangeDisabled: 'El modo de permisos debe establecerse al crear una sesión de Claude. No se puede cambiar en tiempo de ejecución.',
     },
 
     machineLauncher: {

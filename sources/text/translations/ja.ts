@@ -333,6 +333,7 @@ export const ja: TranslationStructure = {
 
     session: {
         inputPlaceholder: 'メッセージを入力...',
+        pendingMessages: ({ count }: { count: number }) => `${count}件のメッセージが待機中`,
     },
 
     commandPalette: {
@@ -484,6 +485,7 @@ export const ja: TranslationStructure = {
             folderLabel: 'フォルダ',
         },
         noMachinesAvailable: 'マシンなし',
+        claudeModeChangeDisabled: '権限モードはClaudeセッションの作成時に設定する必要があります。実行中に変更することはできません。',
     },
 
     machineLauncher: {

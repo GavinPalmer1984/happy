@@ -12,7 +12,7 @@ import { voiceHooks } from '@/realtime/hooks/voiceHooks';
 import { startRealtimeSession, stopRealtimeSession } from '@/realtime/RealtimeSession';
 import { gitStatusSync } from '@/sync/gitStatusSync';
 import { sessionAbort } from '@/sync/ops';
-import { storage, useIsDataReady, useLocalSetting, useRealtimeStatus, useSessionMessages, useSessionUsage, useSetting } from '@/sync/storage';
+import { storage, useIsDataReady, useLocalSetting, usePendingMessages, useRealtimeStatus, useSessionMessages, useSessionUsage, useSetting } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
 import { Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
@@ -172,6 +172,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     const sessionUsage = useSessionUsage(sessionId);
     const alwaysShowContextSize = useSetting('alwaysShowContextSize');
     const experiments = useSetting('experiments');
+    const pendingMessages = usePendingMessages(sessionId);
 
     // Use draft hook for auto-saving message drafts
     const { clearDraft } = useDraft(sessionId, message, setMessage);
@@ -188,10 +189,17 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         }
     }, [machineId, cliVersion, acknowledgedCliVersions]);
 
-    // Function to update permission mode
+    // Check if this is a Claude session (mode changes not supported at runtime)
+    const isClaude = session.metadata?.flavor === 'claude' || !session.metadata?.flavor;
+
+    // Function to update permission mode (disabled for Claude - must be set at session creation)
     const updatePermissionMode = React.useCallback((mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'read-only' | 'safe-yolo' | 'yolo') => {
+        if (isClaude) {
+            Modal.alert(t('agentInput.permissionMode.title'), t('agentInput.claudeModeChangeDisabled'));
+            return;
+        }
         storage.getState().updateSessionPermissionMode(sessionId, mode);
-    }, [sessionId]);
+    }, [sessionId, isClaude]);
 
     // Memoize header-dependent styles to prevent re-renders
     const headerDependentStyles = React.useMemo(() => ({
@@ -309,6 +317,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 contextSize: session.latestUsage.contextSize
             } : undefined}
             alwaysShowContextSize={alwaysShowContextSize}
+            pendingMessagesCount={pendingMessages.length}
         />
     );
 
@@ -349,8 +358,14 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 </Pressable>
             )}
 
-            {/* Main content area - no padding since header is overlay */}
-            <View style={{ flexBasis: 0, flexGrow: 1, paddingBottom: safeArea.bottom + ((isRunningOnMac() || Platform.OS === 'web') ? 32 : 0) }}>
+            {/* Main content area - includes safe area padding for landscape mode */}
+            <View style={{
+                flexBasis: 0,
+                flexGrow: 1,
+                paddingBottom: safeArea.bottom + ((isRunningOnMac() || Platform.OS === 'web') ? 32 : 0),
+                paddingLeft: safeArea.left,
+                paddingRight: safeArea.right,
+            }}>
                 <AgentContentView
                     content={content}
                     input={input}
