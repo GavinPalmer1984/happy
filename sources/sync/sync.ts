@@ -74,6 +74,22 @@ class Sync {
     private recalculationLockCount = 0;
     private lastRecalculationTime = 0;
 
+    // Auto-retry tracking for "process exited unexpectedly" and similar errors
+    // Stores last sent message per session to enable automatic retry on CLI crashes
+    private lastSentMessages = new Map<string, {
+        text: string;
+        displayText?: string;
+        retryCount: number;
+        timestamp: number;
+        retryTimer?: ReturnType<typeof setTimeout>;
+    }>();
+    private static readonly MAX_RETRY_ATTEMPTS = 3;
+    private static readonly RETRY_MESSAGE_MAX_AGE_MS = 30000; // Don't retry messages older than 30s
+    private static readonly ERROR_PATTERNS = [
+        'process exited unexpectedly',
+        'Process exited unexpectedly',
+    ];
+
     constructor() {
         this.sessionsSync = new InvalidateSync(this.fetchSessions);
         this.settingsSync = new InvalidateSync(this.syncSettings);
@@ -289,6 +305,121 @@ class Sync {
             sentFrom,
             permissionMode: permissionMode || 'default'
         });
+
+        // Track last sent message for auto-retry on CLI errors
+        // Clear any existing retry timer for this session
+        const existingEntry = this.lastSentMessages.get(sessionId);
+        if (existingEntry?.retryTimer) {
+            clearTimeout(existingEntry.retryTimer);
+        }
+        this.lastSentMessages.set(sessionId, {
+            text,
+            displayText,
+            retryCount: 0,
+            timestamp: Date.now(),
+        });
+    }
+
+    /**
+     * Check if an agent message text contains CLI error patterns that should trigger retry
+     */
+    private isRetryableError(text: string): boolean {
+        return Sync.ERROR_PATTERNS.some(pattern => text.includes(pattern));
+    }
+
+    /**
+     * Extract text content from message for error detection
+     * Handles both agent text messages and event messages (like "Process exited unexpectedly")
+     */
+    private extractMessageText(message: NormalizedMessage): string | null {
+        // Handle event messages (e.g., "Process exited unexpectedly")
+        if (message.role === 'event' && message.content.type === 'message') {
+            return message.content.message;
+        }
+        // Handle agent text messages
+        if (message.role === 'agent') {
+            for (const content of message.content) {
+                if (content.type === 'text') {
+                    return content.text;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Handle auto-retry for CLI errors like "process exited unexpectedly"
+     * Returns true if retry was triggered (caller should skip normal message processing)
+     *
+     * Diagnostic logging is intentionally verbose to help debug Claude Code issues.
+     * When an error is detected, we log:
+     * - The matched error pattern
+     * - Full error message (truncated)
+     * - Session context
+     * - Retry attempt details
+     */
+    private handleAutoRetry(sessionId: string, agentText: string): boolean {
+        if (!this.isRetryableError(agentText)) {
+            // Not an error - clear retry state on successful response
+            const lastMessage = this.lastSentMessages.get(sessionId);
+            if (lastMessage?.retryTimer) {
+                clearTimeout(lastMessage.retryTimer);
+            }
+            this.lastSentMessages.delete(sessionId);
+            return false;
+        }
+
+        // Find which pattern matched for diagnostics
+        const matchedPattern = Sync.ERROR_PATTERNS.find(p => agentText.includes(p));
+        const truncatedError = agentText.length > 200 ? agentText.substring(0, 200) + '...' : agentText;
+
+        // Log diagnostic info for debugging Claude Code issues
+        log.log(`🔄 Auto-retry: CLI error detected!`);
+        log.log(`🔄 Auto-retry: Pattern matched: "${matchedPattern}"`);
+        log.log(`🔄 Auto-retry: Full error: "${truncatedError}"`);
+        log.log(`🔄 Auto-retry: Session: ${sessionId}`);
+        log.log(`🔄 Auto-retry: Timestamp: ${new Date().toISOString()}`);
+
+        const lastMessage = this.lastSentMessages.get(sessionId);
+        if (!lastMessage) {
+            log.log(`🔄 Auto-retry: No last message to retry for session ${sessionId}`);
+            return false;
+        }
+
+        log.log(`🔄 Auto-retry: Last user message: "${lastMessage.text.substring(0, 100)}${lastMessage.text.length > 100 ? '...' : ''}"`);
+
+        // Check if message is too old
+        const messageAge = Date.now() - lastMessage.timestamp;
+        if (messageAge > Sync.RETRY_MESSAGE_MAX_AGE_MS) {
+            log.log(`🔄 Auto-retry: Message too old (${messageAge}ms > ${Sync.RETRY_MESSAGE_MAX_AGE_MS}ms), skipping retry`);
+            this.lastSentMessages.delete(sessionId);
+            return false;
+        }
+
+        // Check if we've exceeded retry attempts
+        if (lastMessage.retryCount >= Sync.MAX_RETRY_ATTEMPTS) {
+            log.log(`🔄 Auto-retry: Max attempts (${Sync.MAX_RETRY_ATTEMPTS}) reached, giving up`);
+            this.lastSentMessages.delete(sessionId);
+            return false;
+        }
+
+        // Schedule retry with exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, lastMessage.retryCount) * 1000;
+        log.log(`🔄 Auto-retry: Scheduling retry ${lastMessage.retryCount + 1}/${Sync.MAX_RETRY_ATTEMPTS} in ${delay}ms`);
+
+        // Clear any existing timer
+        if (lastMessage.retryTimer) {
+            clearTimeout(lastMessage.retryTimer);
+        }
+
+        // Update retry count before scheduling
+        lastMessage.retryCount++;
+        lastMessage.retryTimer = setTimeout(() => {
+            log.log(`🔄 Auto-retry: Executing retry ${lastMessage.retryCount}/${Sync.MAX_RETRY_ATTEMPTS} for session ${sessionId}`);
+            this.sendMessage(sessionId, lastMessage.text, lastMessage.displayText);
+        }, delay);
+
+        return true;
     }
 
     applySettings = (delta: Partial<Settings>) => {
@@ -1533,6 +1664,14 @@ class Sync {
                 const decrypted = await encryption.decryptMessage(updateData.body.message);
                 if (decrypted) {
                     lastMessage = normalizeRawMessage(decrypted.id, decrypted.localId, decrypted.createdAt, decrypted.content);
+
+                    // Check for CLI errors and trigger auto-retry if needed
+                    if (lastMessage) {
+                        const messageText = this.extractMessageText(lastMessage);
+                        if (messageText && this.handleAutoRetry(updateData.body.sid, messageText)) {
+                            log.log('🔄 Auto-retry triggered for CLI error');
+                        }
+                    }
 
                     // Update session
                     const session = storage.getState().sessions[updateData.body.sid];
