@@ -909,6 +909,38 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                     </Pressable>
                                 )}
 
+                                {/* Usage & Context indicators */}
+                                {props.usageData && (
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingHorizontal: 6,
+                                        height: 32,
+                                        gap: 8,
+                                    }}>
+                                        {/* Context percentage */}
+                                        <Text style={{
+                                            fontSize: 11,
+                                            color: props.usageData.contextSize > MAX_CONTEXT_SIZE * 0.9
+                                                ? theme.colors.warningCritical
+                                                : props.usageData.contextSize > MAX_CONTEXT_SIZE * 0.8
+                                                    ? theme.colors.warning
+                                                    : theme.colors.textSecondary,
+                                            ...Typography.mono(),
+                                        }}>
+                                            {Math.round((props.usageData.contextSize / MAX_CONTEXT_SIZE) * 100)}%
+                                        </Text>
+                                        {/* Token usage */}
+                                        <Text style={{
+                                            fontSize: 11,
+                                            color: theme.colors.textSecondary,
+                                            ...Typography.mono(),
+                                        }}>
+                                            {((props.usageData.inputTokens + props.usageData.outputTokens) / 1000).toFixed(1)}k
+                                        </Text>
+                                    </View>
+                                )}
+
                                 {/* Profile selector button - FIRST */}
                                 {props.profileId && props.onProfileClick && (
                                     <Pressable
