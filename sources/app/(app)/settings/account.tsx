@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -123,16 +123,14 @@ export default React.memo(() => {
                         showChevron={false}
                         copy={!!sync.serverID}
                     />
-                    {Platform.OS !== 'web' && (
-                        <Item
-                            title={t('settingsAccount.linkNewDevice')}
-                            subtitle={isConnecting ? t('common.scanning') : t('settingsAccount.linkNewDeviceSubtitle')}
-                            icon={<Ionicons name="qr-code-outline" size={29} color="#007AFF" />}
-                            onPress={connectAccount}
-                            disabled={isConnecting}
-                            showChevron={false}
-                        />
-                    )}
+                    <Item
+                        title={t('settingsAccount.linkNewDevice')}
+                        subtitle={isConnecting ? t('common.scanning') : t('settingsAccount.linkNewDeviceSubtitle')}
+                        icon={<Ionicons name="qr-code-outline" size={29} color="#007AFF" />}
+                        onPress={connectAccount}
+                        disabled={isConnecting}
+                        showChevron={false}
+                    />
                 </ItemGroup>
 
                 {/* Profile Section */}

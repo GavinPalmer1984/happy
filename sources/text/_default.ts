@@ -386,6 +386,11 @@ export const en = {
             scanQrCode: 'Scan the QR code',
             openCamera: 'Open Camera',
         },
+        qrScanner: {
+            // Used by QRScannerModal component for web platform
+            scanQrCode: 'Scan QR Code',
+            pointCameraAtQr: 'Point your camera at the QR code displayed in your terminal',
+        },
     },
 
     agentInput: {

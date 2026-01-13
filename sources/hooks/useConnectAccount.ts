@@ -8,6 +8,7 @@ import { authAccountApprove } from '@/auth/authAccountApprove';
 import { useCheckScannerPermissions } from '@/hooks/useCheckCameraPermissions';
 import { Modal } from '@/modal';
 import { t } from '@/text';
+import { QRScannerModal } from '@/components/QRScannerModal';
 
 interface UseConnectAccountOptions {
     onSuccess?: () => void;
@@ -50,15 +51,24 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
     }, [auth.credentials, options]);
 
     const connectAccount = React.useCallback(async () => {
-        if (await checkScannerPermissions()) {
-            // Use camera scanner
+        if (Platform.OS === 'web') {
+            // On web, use custom modal with CameraView since launchScanner is not available
+            Modal.show({
+                component: QRScannerModal,
+                props: {
+                    onScanned: processAuthUrl,
+                    urlPrefix: 'happy:///account?',
+                },
+            });
+        } else if (await checkScannerPermissions()) {
+            // Use native camera scanner on mobile
             CameraView.launchScanner({
                 barcodeTypes: ['qr']
             });
         } else {
             Modal.alert(t('common.error'), t('modals.cameraPermissionsRequiredToScanQr'), [{ text: t('common.ok') }]);
         }
-    }, [checkScannerPermissions]);
+    }, [checkScannerPermissions, processAuthUrl]);
 
     const connectWithUrl = React.useCallback(async (url: string) => {
         return await processAuthUrl(url);

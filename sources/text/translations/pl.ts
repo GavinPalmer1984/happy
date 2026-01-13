@@ -397,6 +397,11 @@ export const pl: TranslationStructure = {
             scanQrCode: 'Zeskanuj kod QR',
             openCamera: 'Otwórz kamerę',
         },
+        qrScanner: {
+            // Used by QR scanner modal component
+            scanQrCode: 'Zeskanuj kod QR',
+            pointCameraAtQr: 'Skieruj kamerę na kod QR wyświetlony w terminalu',
+        },
     },
 
     agentInput: {

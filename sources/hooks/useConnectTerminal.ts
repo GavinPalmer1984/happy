@@ -9,6 +9,7 @@ import { useCheckScannerPermissions } from '@/hooks/useCheckCameraPermissions';
 import { Modal } from '@/modal';
 import { t } from '@/text';
 import { sync } from '@/sync/sync';
+import { QRScannerModal } from '@/components/QRScannerModal';
 
 interface UseConnectTerminalOptions {
     onSuccess?: () => void;
@@ -36,7 +37,15 @@ export function useConnectTerminal(options?: UseConnectTerminalOptions) {
             responseV2Bundle.set(sync.encryption.contentDataKey, 1);
             const responseV2 = encryptBox(responseV2Bundle, publicKey);
             await authApprove(auth.credentials!.token, publicKey, responseV1, responseV2);
-            
+
+            // Refresh machines list to show the newly connected terminal
+            // Small delay to allow server to process the new machine
+            console.log('🔗 Terminal connected, refreshing machines list...');
+            setTimeout(() => {
+                sync.refreshMachines();
+                console.log('🔗 Machines refresh triggered');
+            }, 1000);
+
             Modal.alert(t('common.success'), t('modals.terminalConnectedSuccessfully'), [
                 { 
                     text: t('common.ok'), 
@@ -55,15 +64,23 @@ export function useConnectTerminal(options?: UseConnectTerminalOptions) {
     }, [auth.credentials, options]);
 
     const connectTerminal = React.useCallback(async () => {
-        if (await checkScannerPermissions()) {
-            // Use camera scanner
+        if (Platform.OS === 'web') {
+            // On web, use custom modal with CameraView since launchScanner is not available
+            Modal.show({
+                component: QRScannerModal,
+                props: {
+                    onScanned: processAuthUrl,
+                },
+            });
+        } else if (await checkScannerPermissions()) {
+            // Use native camera scanner on mobile
             CameraView.launchScanner({
                 barcodeTypes: ['qr']
             });
         } else {
             Modal.alert(t('common.error'), t('modals.cameraPermissionsRequiredToConnectTerminal'), [{ text: t('common.ok') }]);
         }
-    }, [checkScannerPermissions]);
+    }, [checkScannerPermissions, processAuthUrl]);
 
     const connectWithUrl = React.useCallback(async (url: string) => {
         return await processAuthUrl(url);

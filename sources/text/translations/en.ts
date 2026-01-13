@@ -402,6 +402,11 @@ export const en: TranslationStructure = {
             scanQrCode: 'Scan the QR code',
             openCamera: 'Open Camera',
         },
+        qrScanner: {
+            // Used by QR scanner modal component
+            scanQrCode: 'Scan QR Code',
+            pointCameraAtQr: 'Point your camera at the QR code displayed in your terminal',
+        },
     },
 
     agentInput: {

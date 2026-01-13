@@ -360,6 +360,11 @@ export const ru: TranslationStructure = {
             scanQrCode: 'Отсканируйте QR-код',
             openCamera: 'Открыть камеру',
         },
+        qrScanner: {
+            // Used by QR scanner modal component
+            scanQrCode: 'Сканировать QR-код',
+            pointCameraAtQr: 'Наведите камеру на QR-код, отображаемый в терминале',
+        },
     },
 
     profile: {

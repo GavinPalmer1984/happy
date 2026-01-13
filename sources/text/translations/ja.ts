@@ -419,6 +419,11 @@ export const ja: TranslationStructure = {
             scanQrCode: 'QRコードをスキャン',
             openCamera: 'カメラを開く',
         },
+        qrScanner: {
+            // Used by QR scanner modal component
+            scanQrCode: 'QRコードをスキャン',
+            pointCameraAtQr: 'ターミナルに表示されているQRコードにカメラを向けてください',
+        },
     },
 
     agentInput: {

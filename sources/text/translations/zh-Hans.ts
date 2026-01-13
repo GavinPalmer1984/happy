@@ -389,6 +389,11 @@ export const zhHans: TranslationStructure = {
             scanQrCode: '扫描二维码',
             openCamera: '打开相机',
         },
+        qrScanner: {
+            // Used by QR scanner modal component
+            scanQrCode: '扫描二维码',
+            pointCameraAtQr: '将相机对准终端中显示的二维码',
+        },
     },
 
     agentInput: {
